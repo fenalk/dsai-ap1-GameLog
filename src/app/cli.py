@@ -57,6 +57,24 @@ def register(app):
         ok, ign, erro = importar(fonte, limite, termo)
         click.echo(f"importados={ok} ignorados={ign} falhas={erro}")
 
+    @app.cli.command("sync-games")
+    @click.option("--fonte", default="steam")
+    @click.option("--limite", default=40)
+    @click.option("--termo", default=None)
+    def sync_games_cmd(fonte, limite, termo):
+        """Sincroniza o catálogo com uma fonte externa (idempotente; pensado para cron)."""
+        from .fontes import FONTES
+        from .sync import FonteIndisponivel, sincronizar
+
+        if fonte not in FONTES:
+            raise click.UsageError(f"fonte desconhecida; use uma de {sorted(FONTES)}")
+        try:
+            novos, atualizados, ignorados, falhas = sincronizar(fonte, limite, termo)
+        except FonteIndisponivel as exc:
+            click.echo(f"erro=fonte indisponivel: {exc}")
+            raise click.exceptions.Exit(1) from exc
+        click.echo(f"novos={novos} atualizados={atualizados} ignorados={ignorados} falhas={falhas}")
+
     @app.cli.command("export-games")
     @click.option("--termos", required=True, help="nomes separados por ;, um jogo por nome")
     @click.option("--saida", required=True)
